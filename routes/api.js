@@ -1,21 +1,46 @@
-/*
-*
-*
-*       Complete the API routing below
-*
-*
-*/
-
 'use strict';
 
 var expect = require('chai').expect;
+const MongoClient = require('mongodb');
+
+const CONNECTION_STRING = process.env.DB
 
 module.exports = function (app) {
+  let db;
+  MongoClient.connect(CONNECTION_STRING, function(err, _db) {
+    if (err) {
+      console.error(err) 
+      return
+    }
+    db = _db.db("eoskin-stocks")
+  })  
   
-  // _id, text, created_on(date&time), bumped_on(date&time, starts same as created_on), reported(boolean), delete_password, & replies(array).
   
-  
-  app.route('/api/threads/:board');
+  app.route('/api/threads/:board')
+    .post(async (req, res) => {
+      const {
+        text,
+        delete_password,
+        board
+      } = req.data
+      const created_on = new Date()
+      const data = {
+        created_on,
+        bumped_on: created_on,
+        reported: false,
+        replies: [],
+      }
+      const collection = db.collection('messages')
+      res.redirect(`/b/${board}`)
+        /*_id,
+        text, 
+        created_on,
+        bumped_on,
+        reported,
+        delete_password,
+        */
+      })
+    })
     
   app.route('/api/replies/:board');
 
