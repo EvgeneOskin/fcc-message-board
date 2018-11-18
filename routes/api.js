@@ -48,7 +48,7 @@ module.exports = function (app) {
         text,
         delete_password,
         board,
-        thread_id
+        thread_id,
       } = req.params
       const created_on = new Date()
       const data = {
@@ -56,11 +56,16 @@ module.exports = function (app) {
         created_on,
         delete_password, 
         reported: false,
+        thread_id,
       }
       await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { bumped_on: created_on })
       
-      await db.collection('replies').insertOne({ _id: ObjectID(thread_id) }, { $push: { replies: data} })
+      await db.collection('replies').insertOne({ data })
       
       res.redirect(`/b/${board}/${thread_id}`)
+    })
+    .get(async (req, res) => {
+      const { thread_id } = res.query
+      
     })
 };
