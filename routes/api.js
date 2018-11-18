@@ -2,6 +2,7 @@
 
 var expect = require('chai').expect;
 const MongoClient = require('mongodb');
+const { ObjectID } = require('mongodb');
 
 const CONNECTION_STRING = process.env.DB
 
@@ -21,27 +22,34 @@ module.exports = function (app) {
       const {
         text,
         delete_password,
-        board
-      } = req.data
+        board,
+        thread_id
+      } = req.params
       const created_on = new Date()
-      const data = {
-        created_on,
-        bumped_on: created_on,
-        reported: false,
-        replies: [],
-      }
       const collection = db.collection('messages')
-      res.redirect(`/b/${board}`)
-        /*_id,
-        text, 
-        created_on,
-        bumped_on,
-        reported,
-        delete_password,
-        */
-      })
+      if (thread_id) {
+        const data = {
+          text, 
+          created_on,
+          delete_password, 
+          reported: false,
+        }
+        collection.findOneAndUpdate({_id: ObjectID(thread_id)}, { $push: { replies: data} })
+        res.redirect(`/b/${board}/${thread_id}`)
+      } else {
+        const data = {
+          created_on,
+          bumped_on: created_on,
+          reported: false,
+          replies: [],
+          text,
+          delete_password,
+          board,
+        }
+        await collection.insertOne(data)
+        res.redirect(`/b/${board}`)
+      }
     })
     
   app.route('/api/replies/:board');
-
 };
