@@ -23,6 +23,11 @@ module.exports = function (app) {
         text,
         delete_password,
       } = req.body
+      if (!(text && delete_password)) {
+        req.send('invalid arguments')
+        return 
+      }
+
       const { board } = req.params
       const created_on = new Date()
       const data = {
@@ -72,10 +77,9 @@ module.exports = function (app) {
     })
     .delete(async (req, res) => {
       const { thread_id, delete_password } = req.body
-      const value = await db.collection('threads').findOneAndDelete(
-        { thread_id, delete_password }
+      const { value } = await db.collection('threads').findOneAndDelete(
+        { _id: ObjectID(thread_id), delete_password }
       )
-      console.log(value)
       if (!value) {
         res.send('incorrect password')
       } else {
@@ -85,12 +89,16 @@ module.exports = function (app) {
     })
     
   app.route('/api/replies/:board')
-   .post(async (req, res) => {
+    .post(async (req, res) => {
       const {
         text,
         delete_password,
         thread_id,
       } = req.body
+       if (!(text && delete_password && thread_id)) {
+        req.send('invalid arguments')
+        return 
+      }
       const { board } = req.params
       const created_on = new Date()
       const data = {
@@ -146,16 +154,14 @@ module.exports = function (app) {
     })
     .delete(async (req, res) => {
       const { thread_id, delete_password, reply_id } = req.body
-      const data = await db.collection('threads').findOneAndUpdate(
+      const { value } = await db.collection('replies').findOneAndUpdate(
         {
+          thread_id: ObjectID(thread_id), 
           _id: ObjectID(reply_id),
-          delete_password: ''
+          delete_password
         },
-        { $set: {text: '[deleted]' } },
-        { returnNewDocument: true }
+        { $set: {text: '[deleted]' } }
       )
-      const { value } = data
-      console.log(data)
       if (!value) {
         res.send('incorrect password')
       } else {
