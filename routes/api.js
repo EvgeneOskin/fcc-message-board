@@ -22,14 +22,13 @@ module.exports = function (app) {
       const {
         text,
         delete_password,
-        board,
-      } = req.params
+      } = req.body
+      const { board } = req.params
       const created_on = new Date()
       const data = {
         created_on,
         bumped_on: created_on,
         reported: false,
-        replies: [],
         text,
         delete_password,
         board,
@@ -40,22 +39,27 @@ module.exports = function (app) {
     })
     .get(async (req, res) => {
       const collection = db.collection('threads')
-      const cursor = await collection.aggregate({
+      const cursor = await collection.aggregate([
+        { $project: {delete_password: false, reported: false} },
+        {
         $lookup: {
           from: 'replies',
-          pipeline: [{$l}],
+          pipeline: [
+            { $project: {delete_password: false, reported: false} },
+          ],
           as: 'replies',
         }
-      })
-      res.send(cursor.toArray())
+      }])
+      const data = await cursor.toArray()
+      res.send(data)
     })
     .put(async (req, res) => {
-      const {thread_id } = req.params
+      const {thread_id } = req.body
       await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { reported: true })
       res.send('success')
     })
     .delete(async (req, res) => {
-      const { thread_id, delete_password } = req.params
+      const { thread_id, delete_password } = req.body
       const value = await db.collection('threads').findOneAndDelete({thread_id, delete_password})
       if (!value) {
         res.send('incorrect password')
@@ -70,9 +74,9 @@ module.exports = function (app) {
       const {
         text,
         delete_password,
-        board,
         thread_id,
-      } = req.params
+      } = req.body
+      const { board } = req.params
       const created_on = new Date()
       const data = {
         text, 
@@ -83,17 +87,38 @@ module.exports = function (app) {
       }
       await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { bumped_on: created_on })
       
-      await db.collection('replies').insertOne({ data })
+      await db.collection('replies').insertOne(data)
       
       res.redirect(`/b/${board}/${thread_id}`)
     })
     .get(async (req, res) => {
-      const { thread_id } = res.query
-      
+      const { thread_id } = req.query
+      const collection = db.collection('threads')
+      const cursor = await collection.aggregate([
+        { $match: { thread_id }},
+        { 
+          $sort: {},
+          $project: {delete_password: false, reported: false} 
+        },
+        {
+        $lookup: {
+          from: 'replies',
+          pipeline: [
+            { $limit: 3 },
+            { $project: {delete_password: false, reported: false} },
+          ],
+          as: 'replies',
+        }
+      }])
+      const data = await cursor.toArray()
+      res.send(data)
     })
     .put(async (req, res) => {
       const {thread_id, reply_id, board } = req.params
-      await db.collection('replies').findOneAndUpdate({ thread_id, reply_id }, { reported: true })
+      await db.collection('replies').findOneAndUpdate(
+        { thread_id, _id: ObjectID(reply_id) }, 
+        { reported: true }
+      )
       res.send('success')
     })
     .delete(async (req, res) => {
