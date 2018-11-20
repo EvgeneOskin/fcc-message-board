@@ -40,16 +40,25 @@ module.exports = function (app) {
     .get(async (req, res) => {
       const collection = db.collection('threads')
       const cursor = await collection.aggregate([
+        { $sort: { bumped_on: 1 } },
+        { $limit: 10 },
         { $project: {delete_password: false, reported: false} },
         {
-        $lookup: {
-          from: 'replies',
-          pipeline: [
-            { $project: {delete_password: false, reported: false} },
-          ],
-          as: 'replies',
-        }
-      }])
+          $lookup: {
+            from: 'replies',
+            let: { indicator_id: '$_id' }, 
+            pipeline: [
+              { $match: {
+                $expr: { $eq: [ '$thread_id', '$$indicator_id' ] }
+              } },
+              { $sort: { created_on: 1 } },
+              { $limit: 3 },
+              { $project: {delete_password: false, reported: false} },
+            ],
+            as: 'replies',
+          }
+        },
+      ])
       const data = await cursor.toArray()
       res.send(data)
     })
@@ -95,30 +104,22 @@ module.exports = function (app) {
       const { thread_id } = req.query
       const collection = db.collection('threads')
       const cursor = await collection.aggregate([
-        { $match: { thread_id }},
-        { $sort: { bumped_on: true } },
+        { $match: { _id: ObjectID(thread_id) }},
         { $project: {delete_password: false, reported: false} },
-        { $limit: 10 },
         {
           $lookup: {
             from: 'replies',
+            let: { indicator_id: '$_id' }, 
             pipeline: [
+              { $match: {
+                $expr: { $eq: [ '$thread_id', '$$indicator_id' ] }
+              } },
+              { $sort: { created_on: 1 } },
               { $project: { delete_password: false, reported: false} },
             ],
-            localField: '_id',
-            foreignField: 'thread_id',
             as: 'replies',
           },
         },
-        {
-    "$project": {
-        "replies": {
-            $sort: { bumped_on: true } 
-            "$slice": ["$replies", 3]
-        }
-    }
-        }
-
       ])
       const data = await cursor.toArray()
       res.send(data)
