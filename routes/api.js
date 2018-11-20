@@ -64,12 +64,18 @@ module.exports = function (app) {
     })
     .put(async (req, res) => {
       const {thread_id } = req.body
-      await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { reported: true })
-      res.send('success')
+      await db.collection('threads').findOneAndUpdate(
+        { _id: ObjectID(thread_id) }, 
+        { $set: {reported: true } }
+      )
+      res.send('reported')
     })
     .delete(async (req, res) => {
       const { thread_id, delete_password } = req.body
-      const value = await db.collection('threads').findOneAndDelete({thread_id, delete_password})
+      const value = await db.collection('threads').findOneAndDelete(
+        { thread_id, delete_password }
+      )
+      console.log(value)
       if (!value) {
         res.send('incorrect password')
       } else {
@@ -94,7 +100,10 @@ module.exports = function (app) {
         reported: false,
         thread_id: ObjectID(thread_id),
       }
-      await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { bumped_on: created_on })
+      await db.collection('threads').findOneAndUpdate(
+        { _id: ObjectID(thread_id) }, 
+        { $set: { bumped_on: created_on }}
+      )
       
       await db.collection('replies').insertOne(data)
       
@@ -122,21 +131,31 @@ module.exports = function (app) {
         },
       ])
       const data = await cursor.toArray()
-      res.send(data)
+      res.send(data[0])
     })
     .put(async (req, res) => {
-      const {thread_id, reply_id, board } = req.params
+      const {thread_id, reply_id } = req.body
       await db.collection('replies').findOneAndUpdate(
-        { thread_id, _id: ObjectID(reply_id) }, 
-        { reported: true }
+        {
+          thread_id: ObjectID(thread_id), 
+          _id: ObjectID(reply_id) 
+        }, 
+        { $set: { reported: true } }
       )
-      res.send('success')
+      res.send('reported')
     })
     .delete(async (req, res) => {
-      const { thread_id, delete_password } = req.params
-      const value = await db.collection('threads').findOneAndUpdate(
-        {thread_id, delete_password}, { text: '[deleted]' }
+      const { thread_id, delete_password, reply_id } = req.body
+      const data = await db.collection('threads').findOneAndUpdate(
+        {
+          _id: ObjectID(reply_id),
+          delete_password: ''
+        },
+        { $set: {text: '[deleted]' } },
+        { returnNewDocument: true }
       )
+      const { value } = data
+      console.log(data)
       if (!value) {
         res.send('incorrect password')
       } else {
