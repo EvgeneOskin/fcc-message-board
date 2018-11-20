@@ -43,8 +43,10 @@ module.exports = function (app) {
       res.redirect(`/b/${board}`)
     })
     .get(async (req, res) => {
+      const { board } = req.params
       const collection = db.collection('threads')
       const cursor = await collection.aggregate([
+        { $match: { board }},
         { $sort: { bumped_on: 1 } },
         { $limit: 10 },
         { $project: {delete_password: false, reported: false} },
