@@ -14,7 +14,9 @@ var server = require('../server');
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
-
+  let thread_id = null
+  let reply_id = null
+  
   suite('API ROUTING FOR /api/threads/:board', function() {
     
     suite('POST', function() {
@@ -27,15 +29,14 @@ suite('Functional Tests', function() {
           .post('/api/threads/fcc')
           .send(payload)
           .end(function(err, res){
-            assert.equal(res.status, 302);
+            assert.equal(res.status, 200);
             done()
           })
-        })
       })
-    });
+    })
     
     suite('GET', function() {
-      test('get a thread', (done) => {
+      test('get threads', (done) => {
         chai.request(server)
           .get('/api/threads/fcc')
           .end(function(err, res){
@@ -46,16 +47,39 @@ suite('Functional Tests', function() {
             assert.property(res.body[0], 'created_on')
             assert.property(res.body[0], 'bumped_on')
             assert.property(res.body[0], 'board')
-            assert.property(res.body[0], 'delete_password')
-            assert.property(res.body[0], 'reported')
+            assert.notProperty(res.body[0], 'delete_password')
+            assert.notProperty(res.body[0], 'reported')
+            assert.property(res.body[0], 'replies')
+            assert.isArray(res.body[0].replies, 'response should be an array');
+            assert.isBelow(res.body.length, 11)
+            assert.isBelow(res.body[0].replies.length, 4)
+            thread_id = res.body[0]._id
             done()
           })
-        })
       })
-    });
+    })
     
     suite('DELETE', function() {
-      
+      test('delete a thread with invalid password', (done) => {
+        chai.request(server)
+          .delete('/api/threads/fcc')
+          .send({ thread_id, delete_password: '' })
+          .end(function(err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.text, 'incorrect password');
+            done()
+          })
+      })
+      test('delete a thread', (done) => {
+        chai.request(server)
+          .delete('/api/threads/fcc')
+          .send({ thread_id, delete_password: 'delete' })
+          .end(function(err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.text, 'success');
+            done()
+          })
+      })
     });
     
     suite('PUT', function() {
