@@ -92,7 +92,7 @@ module.exports = function (app) {
         created_on,
         delete_password, 
         reported: false,
-        thread_id,
+        thread_id: ObjectID(thread_id),
       }
       await db.collection('threads').findOneAndUpdate({ _id: ObjectID(thread_id) }, { bumped_on: created_on })
       
