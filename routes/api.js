@@ -96,20 +96,30 @@ module.exports = function (app) {
       const collection = db.collection('threads')
       const cursor = await collection.aggregate([
         { $match: { thread_id }},
-        { 
-          $sort: {},
-          $project: {delete_password: false, reported: false} 
+        { $sort: { bumped_on: true } },
+        { $project: {delete_password: false, reported: false} },
+        { $limit: 10 },
+        {
+          $lookup: {
+            from: 'replies',
+            pipeline: [
+              { $project: { delete_password: false, reported: false} },
+            ],
+            localField: '_id',
+            foreignField: 'thread_id',
+            as: 'replies',
+          },
         },
         {
-        $lookup: {
-          from: 'replies',
-          pipeline: [
-            { $limit: 3 },
-            { $project: {delete_password: false, reported: false} },
-          ],
-          as: 'replies',
+    "$project": {
+        "replies": {
+            $sort: { bumped_on: true } 
+            "$slice": ["$replies", 3]
         }
-      }])
+    }
+        }
+
+      ])
       const data = await cursor.toArray()
       res.send(data)
     })
