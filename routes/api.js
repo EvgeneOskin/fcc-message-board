@@ -13,7 +13,7 @@ module.exports = function (app) {
       console.error(err) 
       return
     }
-    db = _db.db("eoskin-stocks")
+    db = _db.db("eoskin-messages")
   })  
   
   
@@ -38,8 +38,16 @@ module.exports = function (app) {
       await collection.insertOne(data)
       res.redirect(`/b/${board}`)
     })
-    .get((req, res) => {
-      req.send('')
+    .get(async (req, res) => {
+      const collection = db.collection('threads')
+      const cursor = await collection.aggregate({
+        $lookup: {
+          from: 'replies',
+          pipeline: [{$l}],
+          as: 'replies',
+        }
+      })
+      res.send(cursor.toArray())
     })
     .put(async (req, res) => {
       const {thread_id } = req.params
